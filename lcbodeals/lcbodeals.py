@@ -8,7 +8,7 @@ import re
 import aiohttp
 from bs4 import BeautifulSoup
 
-__all__ = ["get_json_feed"]
+# __all__ = ["get_json_feed", "check_availablity"]
 
 PAGE_SIZE = 24
 SEM = None
@@ -238,15 +238,58 @@ async def get_deals():
     return resp
 
 
-def main():
-    """let's kick it all off"""
-    deals = get_json_feed()
+def _html_to_availablity(html: str):
+    soup = BeautifulSoup(html, "html.parser")
+    home_delivery = soup.find("div", class_="productDelivery")
+    p_elem = home_delivery.find("p", role="button")
+    resp = {"home_delivery": p_elem.string.strip()}
 
-    json_string = json.dumps(deals, indent=2)
-    with open("./public/feed.json", "w") as file_obj:
-        file_obj.write(json_string)
-    print(json_string)
+    store_pickup = soup.find("div", class_="storePickup")
+
+    p_elem = store_pickup.find("p", role="button")
+    resp["store_pickup"] = p_elem.string.strip()
+    walk_in = soup.find("div", class_="walkIn")
+    p_elem = walk_in.find("p", role="button")
+    resp["walk_in"] = p_elem.string.strip()
+
+    return resp
 
 
-if __name__ == "__main__":
-    main()
+async def check_availablity(slug: str):
+    url = f"https://www.lcbo.com/webapp/wcs/stores/servlet/en/lcbo/{slug}"
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as resp:
+            html = await resp.text()
+    availability = _html_to_availablity(html)
+    return availability
+
+
+def _html_to_inventory(html: str):
+    soup = BeautifulSoup(html, "html.parser")
+
+    pattern = r"var storesArray = (.*?\]);"
+    match = re.search(pattern, html, re.DOTALL)
+    if not match:
+        return None
+
+    json_str = match.group(1)
+
+    # wrap the keys in double-quotes
+    pattern = r"\t{4}(.*?)\s*:"
+    json_str = re.sub(pattern, r'"\1" :', json_str)
+
+    # remove the Math.floor and the trailing comma
+    pattern = r'Math.floor\("(.*)"\),'
+    json_str = re.sub(pattern, r"\1", json_str)
+    return json.loads(json_str)
+
+
+async def check_inventory(product_id: int):
+    url = f"https://www.lcbo.com/webapp/wcs/stores/servlet/PhysicalStoreInventoryView"
+
+    params = {"langId": -1, "storeId": 10203, "catalogId": "", "productId": product_id}
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url, params=params) as resp:
+            html = await resp.text()
+    inventory = _html_to_inventory(html)
+    return inventory
