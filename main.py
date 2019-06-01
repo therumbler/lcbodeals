@@ -28,12 +28,12 @@ def setup_logging(level=logging.DEBUG):
 
 
 def main():
-    setup_logging(logging.DEBUG)
+    setup_logging(logging.INFO)
     slug = "blantons-single-barrel-special-reserve-kentucky-straight-bourbon-558320"
-    availablity = asyncio.run(check_availablity(slug))
-    logger.info("availability = %s", availablity)
-    inventory = asyncio.run(check_inventory(64174))
-    logger.info("inventory = %s", inventory)
+    #availablity = asyncio.run(check_availablity(slug))
+    #logger.info("availability = %s", availablity)
+    #inventory = asyncio.run(check_inventory(64174))
+    #logger.info("inventory = %s", inventory)
     feed = get_json_feed()
 
     # with open('public/feed.json') as file_obj:

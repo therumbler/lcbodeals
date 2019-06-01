@@ -242,7 +242,6 @@ def _html_to_availablity(html: str):
     soup = BeautifulSoup(html, "html.parser")
     home_delivery = soup.find("div", class_="productDelivery")
     p_elem = home_delivery.find("p", role="button")
-    logger.debug("p_elem = %s", p_elem.string)
     resp = {"home_delivery": p_elem.string.strip()}
 
     store_pickup = soup.find("div", class_="storePickup")
@@ -282,7 +281,6 @@ def _html_to_inventory(html: str):
     # remove the Math.floor and the trailing comma
     pattern = r'Math.floor\("(.*)"\),'
     json_str = re.sub(pattern, r"\1", json_str)
-    logger.debug("json_str = %s", json_str)
     return json.loads(json_str)
 
 
@@ -292,8 +290,6 @@ async def check_inventory(product_id: int):
     params = {"langId": -1, "storeId": 10203, "catalogId": "", "productId": product_id}
     async with aiohttp.ClientSession() as session:
         async with session.get(url, params=params) as resp:
-            logger.debug("url = %s", resp.url)
-            logger.debug("status = %s", resp.status)
             html = await resp.text()
     inventory = _html_to_inventory(html)
     return inventory
